@@ -33,10 +33,19 @@ PY=${PYTHON:-python3}
 
 # Read apex domains from config
 readarray -t APEXS < <(
-  "$PY" - <<'PY'
+  "$PY" - "$CONFIG_PATH" <<'PY'
 import sys
 from pathlib import Path
-import yaml
+try:
+    import yaml
+except Exception as e:
+    raise SystemExit(
+        "PyYAML is required. Install: sudo apt-get install -y python3-yaml\n"
+        "(or: python3 -m pip install pyyaml)"
+    ) from e
+
+if len(sys.argv) < 2:
+  raise SystemExit('Internal error: missing config path argument')
 
 cfg = yaml.safe_load(Path(sys.argv[1]).read_text(encoding='utf-8'))
 
@@ -53,7 +62,6 @@ if len(apexes) < 2:
 print(apexes[0])
 print(apexes[1])
 PY
-  "$CONFIG_PATH"
 )
 
 APEX_A=${APEXS[0]}

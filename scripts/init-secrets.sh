@@ -35,6 +35,10 @@ fi
 
 chmod 600 "$SECRETS_FILE" || true
 
+# Always create the log file (even if nothing changes)
+: >"$LOG_FILE"
+chmod 600 "$LOG_FILE" || true
+
 # Generate random base64-ish token (no trailing '=')
 rand() {
   # 32 bytes -> 43-ish chars when base64
@@ -70,8 +74,6 @@ set_kv_if_empty "ZBX_DB_PASSWORD" "$(rand)"
 set_kv_if_empty "WP_ADMIN_USER" "admin"
 set_kv_if_empty "WP_ADMIN_PASSWORD" "$(rand)"
 set_kv_if_empty "WP_ADMIN_EMAIL" "admin@example.com"
-
-chmod 600 "$LOG_FILE" || true
 
 echo "Wrote: $SECRETS_FILE"
 echo "Logged generated secrets to: $LOG_FILE"

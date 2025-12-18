@@ -55,10 +55,19 @@ fi
 # Extract required values from YAML using python (keeps bash simple)
 PY=${PYTHON:-python3}
 readarray -t CERT_PLAN < <(
-  "$PY" - <<'PY'
+  "$PY" - "$CONFIG_PATH" <<'PY'
 import sys
 from pathlib import Path
-import yaml
+try:
+    import yaml
+except Exception as e:
+    raise SystemExit(
+        "PyYAML is required. Install: sudo apt-get install -y python3-yaml\n"
+        "(or: python3 -m pip install pyyaml)"
+    ) from e
+
+if len(sys.argv) < 2:
+  raise SystemExit('Internal error: missing config path argument')
 
 cfg_path = Path(sys.argv[1])
 cfg = yaml.safe_load(cfg_path.read_text(encoding='utf-8'))
@@ -85,7 +94,6 @@ for s in sites:
     tls = [str(d) for d in tls]
     print("CERT=" + cert_name + " " + " ".join(tls))
 PY
-  "$CONFIG_PATH"
 )
 
 EMAIL=$(printf '%s\n' "${CERT_PLAN[@]}" | awk -F= '/^EMAIL=/{print $2; exit}')
