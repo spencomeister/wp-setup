@@ -27,6 +27,7 @@ services:
       - ./secrets.env
     environment:
       WP_CLI_ALLOW_ROOT: "1"
+      WP_CLI_PHP_ARGS: "-d memory_limit=512M"
     volumes:
       - wp_a_wordpress:/var/www/html
     networks:
@@ -39,6 +40,7 @@ services:
       - ./secrets.env
     environment:
       WP_CLI_ALLOW_ROOT: "1"
+      WP_CLI_PHP_ARGS: "-d memory_limit=512M"
     volumes:
       - wp_b_wordpress:/var/www/html
     networks:

@@ -96,3 +96,14 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
 2) `out/.env` を用意してから `cd out` で実行する
 - `bash scripts/init-secrets.sh` を実行すると `out/.env` も自動生成されます。
 
+---
+
+## `wp-bootstrap.sh` 実行時に `Allowed memory size ... exhausted`（wp-cliのPHP OOM）
+
+原因:
+- `wordpress:cli` 内の PHP `memory_limit` が小さく、WordPressの展開処理でメモリ不足になります（128MBで発生しやすい）。
+
+対処:
+- 修正版では `WP_CLI_PHP_ARGS='-d memory_limit=512M'` を付与して実行します。
+- 反映後、`out/` を再生成してから再実行してください。
+

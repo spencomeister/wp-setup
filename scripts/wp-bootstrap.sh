@@ -71,6 +71,9 @@ ADMIN_USER=${WP_ADMIN_USER:-admin}
 ADMIN_PASS=${WP_ADMIN_PASSWORD:-}
 ADMIN_EMAIL=${WP_ADMIN_EMAIL:-admin@example.com}
 
+# wordpress:cli の PHP が 128MB だと展開処理で落ちることがあるため引き上げる
+WP_CLI_PHP_ARGS_DEFAULT=${WP_CLI_PHP_ARGS_DEFAULT:-"-d memory_limit=512M"}
+
 if [[ -z "$ADMIN_PASS" ]]; then
   echo "WP_ADMIN_PASSWORD is empty; run scripts/init-secrets.sh" >&2
   exit 1
@@ -102,23 +105,31 @@ run_wp() {
   echo "--- Bootstrapping $stack ($url) ---"
 
   # Download WordPress if not present
-  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm "$stack-cli" \
+  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
+    -e "WP_CLI_PHP_ARGS=$WP_CLI_PHP_ARGS_DEFAULT" \
+    "$stack-cli" \
     sh -lc "test -f wp-settings.php || wp core download --path=/var/www/html --force"
 
   # Create wp-config.php if missing
-  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm "$stack-cli" \
+  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
+    -e "WP_CLI_PHP_ARGS=$WP_CLI_PHP_ARGS_DEFAULT" \
+    "$stack-cli" \
     sh -lc "test -f wp-config.php || wp config create --path=/var/www/html \
       --dbname=wordpress --dbuser=$db_user --dbpass='$db_pass' --dbhost=$db_host \
       --skip-check --force"
 
   # Install core if not installed
-  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm "$stack-cli" \
+  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
+    -e "WP_CLI_PHP_ARGS=$WP_CLI_PHP_ARGS_DEFAULT" \
+    "$stack-cli" \
     sh -lc "wp core is-installed --path=/var/www/html || wp core install --path=/var/www/html \
       --url='$url' --title='WordPress ($apex)' \
       --admin_user='$ADMIN_USER' --admin_password='$ADMIN_PASS' --admin_email='$ADMIN_EMAIL'"
 
   # Enable multisite (subdomain) if not already
-  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm "$stack-cli" \
+  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
+    -e "WP_CLI_PHP_ARGS=$WP_CLI_PHP_ARGS_DEFAULT" \
+    "$stack-cli" \
     sh -lc "wp config get MULTISITE --path=/var/www/html >/dev/null 2>&1 || wp core multisite-convert --path=/var/www/html --subdomains --title='Network ($apex)'"
 
   echo "OK: $stack"
