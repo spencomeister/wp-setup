@@ -16,8 +16,11 @@ if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "Missing $COMPOSE_FILE (run scripts/render.py)" >&2
   exit 1
 fi
+if [[ ! -f "$SECRETS_FILE" && -f "$ROOT_DIR/config/secrets.env" ]]; then
+  SECRETS_FILE="$ROOT_DIR/config/secrets.env"
+fi
 if [[ ! -f "$SECRETS_FILE" ]]; then
-  echo "Missing $SECRETS_FILE (run scripts/init-secrets.sh)" >&2
+  echo "Missing out/secrets.env (or config/secrets.env). Run scripts/init-secrets.sh" >&2
   exit 1
 fi
 

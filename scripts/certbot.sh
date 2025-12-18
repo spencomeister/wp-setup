@@ -34,8 +34,11 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
 fi
 
 SECRETS_FILE="$OUT_DIR/secrets.env"
+if [[ ! -f "$SECRETS_FILE" && -f "$ROOT_DIR/config/secrets.env" ]]; then
+  SECRETS_FILE="$ROOT_DIR/config/secrets.env"
+fi
 if [[ ! -f "$SECRETS_FILE" ]]; then
-  echo "Missing secrets: $SECRETS_FILE (run scripts/init-secrets.sh)" >&2
+  echo "Missing secrets: out/secrets.env (or config/secrets.env). Run scripts/init-secrets.sh" >&2
   exit 1
 fi
 

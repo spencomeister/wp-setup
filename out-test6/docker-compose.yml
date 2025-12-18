@@ -7,9 +7,9 @@ services:
     image: nginx:stable
     restart: unless-stopped
     ports:
-      - "{{EDGE_BIND_PORT}}:443"
+      - "443:443"
     volumes:
-      - {{LE_DIR}}:/etc/letsencrypt:ro
+      - /srv/letsencrypt:/etc/letsencrypt:ro
       - ./nginx/edge:/etc/nginx/conf.d:ro
       - ./nginx/snippets:/etc/nginx/snippets:ro
     networks:

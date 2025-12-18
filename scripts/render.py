@@ -145,6 +145,11 @@ def render(config_path: Path, templates_dir: Path, out_dir: Path) -> None:
     config = _load_yaml(config_path)
     bind_port, le_dir, sites, upload_max_mb = parse_sites(config)
 
+    # Preserve operator secrets across re-render
+    preserved_secrets: str | None = None
+    if (out_dir / "secrets.env").exists():
+        preserved_secrets = _read_text(out_dir / "secrets.env")
+
     # Recreate out dir
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -222,6 +227,13 @@ def render(config_path: Path, templates_dir: Path, out_dir: Path) -> None:
     secrets_example = config_path.parent / "secrets.env.example"
     if secrets_example.exists():
         _write_text(out_dir / "secrets.env.example", _read_text(secrets_example))
+
+    # Copy canonical secrets if present
+    canonical_secrets = config_path.parent / "secrets.env"
+    if canonical_secrets.exists():
+        _write_text(out_dir / "secrets.env", _read_text(canonical_secrets))
+    elif preserved_secrets is not None:
+        _write_text(out_dir / "secrets.env", preserved_secrets)
 
     # Copy certbot helper script templates are host-side; nothing to do here.
 

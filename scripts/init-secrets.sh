@@ -5,7 +5,8 @@ set -euo pipefail
 # and logs generated values to a log file (as requested).
 #
 # Output:
-# - out/secrets.env (or --out-dir)
+# - config/secrets.env (canonical)
+# - out/secrets.env (copied if out/ exists)
 # - logs/secrets-<timestamp>.log (contains generated secrets)
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
@@ -18,7 +19,9 @@ mkdir -p "$OUT_DIR" "$LOG_DIR"
 
 TS=$(date +%Y%m%d-%H%M%S)
 LOG_FILE="$LOG_DIR/secrets-$TS.log"
-SECRETS_FILE="$OUT_DIR/secrets.env"
+
+CONFIG_SECRETS_FILE="$ROOT_DIR/config/secrets.env"
+SECRETS_FILE="$CONFIG_SECRETS_FILE"
 
 if [[ ! -f "$SECRETS_EXAMPLE" ]]; then
   echo "Missing secrets.env.example: $SECRETS_EXAMPLE" >&2
@@ -73,3 +76,10 @@ chmod 600 "$LOG_FILE" || true
 echo "Wrote: $SECRETS_FILE"
 echo "Logged generated secrets to: $LOG_FILE"
 echo "NOTE: This log contains passwords (requested). Protect it appropriately."
+
+# Copy into out/ for docker compose (render.py may recreate out/)
+if [[ -d "$OUT_DIR" ]]; then
+  cp "$SECRETS_FILE" "$OUT_DIR/secrets.env"
+  chmod 600 "$OUT_DIR/secrets.env" || true
+  echo "Copied to: $OUT_DIR/secrets.env"
+fi

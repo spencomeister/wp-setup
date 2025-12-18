@@ -1,0 +1,68 @@
+# トラブルシューティング
+
+## `pull access denied for wpcli/wp-cli`
+
+原因:
+- `wpcli/wp-cli` は取得できない（リポジトリ名が存在しない/変更された）ため、`docker compose up` 時に pull が失敗します。
+
+対処:
+1. リポジトリを最新化（この修正を含む版）
+2. `out/` を再生成
+
+```bash
+python3 scripts/render.py --config config/config.yml --out out
+```
+
+3. 再度起動
+
+```bash
+docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
+```
+
+確認:
+- `docker images | grep wordpress` で `wordpress:cli` が pull されていること
+
+---
+
+## edge が Restarting（`duplicate "log_format" name "main"`）
+
+症状:
+- `docker logs wp-setup-edge-1` に以下が出て再起動ループ
+	- `duplicate "log_format" name "main" in /etc/nginx/conf.d/00-edge.conf`
+
+原因:
+- `nginx:stable` イメージ側で既に `log_format main` が定義されているのに、こちらの設定でも同名を定義していた
+
+対処:
+1) `out/` を再生成
+
+```bash
+python3 scripts/render.py --config config/config.yml --out out
+```
+
+2) edge を再起動
+
+```bash
+docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
+docker compose -f out/docker-compose.yml --env-file out/secrets.env restart edge
+```
+
+次に出やすいエラー:
+- `/srv/letsencrypt/live/...` が無い（証明書未発行）→ 下の「証明書が無い」へ
+
+---
+
+## `config.yml` にトークンや secrets を貼り付けて壊した
+
+よくある症状:
+- `config/config.yml` の `cloudflare.dns_api_token_env` に「トークン本体」を入れてしまう
+- `config/config.yml` に `secrets.env` の内容を貼り付けて YAML が壊れる（重複キー/不正インデント）
+
+正:
+- `cloudflare.dns_api_token_env` は **環境変数名**（例: `CF_DNS_API_TOKEN`）
+- トークン本体は `out/secrets.env`（または元ネタの `config/secrets.env`）に `CF_DNS_API_TOKEN=...` として入れる
+
+復旧:
+- `config/config.yml.example` をベースに `config/config.yml` を作り直し
+- `bash scripts/init-secrets.sh` で `out/secrets.env` を作り直し
+

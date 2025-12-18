@@ -35,6 +35,8 @@ B:/develop/wp-setup/.venv/Scripts/python.exe scripts/render.py --config config/c
 
 生成物は `out/` に出ます（`docker-compose.yml` と Nginx/ PHP 設定）。
 
+※ `templates/` を更新した場合は、必ず `scripts/render.py` を再実行して `out/` を作り直してください。
+
 ### 3) ホスト側（Ubuntu/AL2023）準備
 
 Ubuntu:
@@ -70,7 +72,7 @@ python3 scripts/render.py --config config/config.yml --out out
 bash scripts/init-secrets.sh
 ```
 
-- 出力: `out/secrets.env`
+- 出力: `config/secrets.env`（永続） + `out/secrets.env`（存在すればコピー）
 - ログ: `logs/secrets-<timestamp>.log`（要求通り **パスワードが残ります**）
 
 4) 証明書発行（既存があれば再利用）
