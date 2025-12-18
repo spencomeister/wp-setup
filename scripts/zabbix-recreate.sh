@@ -63,7 +63,7 @@ fi
 
 # 5) Issue ONLY Zabbix certs (force re-issue to reflect domain changes)
 # NOTE: Do NOT reload edge here; edge might not be up yet.
-bash "$ROOT_DIR/scripts/certbot.sh" issue --config "$CONFIG_PATH" --out "$OUT_DIR" --only-type zabbix --force
+bash "$ROOT_DIR/scripts/certbot.sh" issue --config "$CONFIG_PATH" --out "$OUT_DIR" --only-type zabbix --force --reload-edge
 
 # 6) Bring up edge + zabbix
 docker compose -f "$OUT_DIR/docker-compose.yml" --env-file "$OUT_DIR/secrets.env" up -d edge zbx-db zbx-server zbx-web

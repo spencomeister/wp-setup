@@ -114,6 +114,21 @@ for s in sites:
 PY
 )
 
+# If no CERT lines were produced, we did not schedule any issuance.
+# This often means:
+# - edge.sites has no matching type (e.g. zabbix removed)
+# - tls_domains is empty/missing
+# - --only-type value doesn't match
+if ! printf '%s\n' "${CERT_PLAN[@]}" | grep -q '^CERT='; then
+  if [[ -n "$ONLY_TYPE" ]]; then
+    echo "No certs planned for --only-type '$ONLY_TYPE'." >&2
+  else
+    echo "No certs planned (no edge.sites[*].tls_domains found)." >&2
+  fi
+  echo "Check config: edge.sites[*].type and edge.sites[*].tls_domains" >&2
+  exit 1
+fi
+
 EMAIL=$(printf '%s\n' "${CERT_PLAN[@]}" | awk -F= '/^EMAIL=/{print $2; exit}')
 LE_DIR=$(printf '%s\n' "${CERT_PLAN[@]}" | awk -F= '/^LE_DIR=/{print $2; exit}')
 REUSE=$(printf '%s\n' "${CERT_PLAN[@]}" | awk -F= '/^REUSE=/{print $2; exit}')
@@ -201,7 +216,7 @@ while IFS= read -r line; do
   cert_name=${rest%% *}
   domains=${rest#* }
 
-  if [[ "$REUSE" == "1" && -f "$LE_DIR/live/$cert_name/fullchain.pem" ]]; then
+  if [[ "$REUSE" == "1" && "$FORCE_REISSUE" != "1" && -f "$LE_DIR/live/$cert_name/fullchain.pem" ]]; then
     echo "Reuse existing cert: $cert_name"
     continue
   fi
