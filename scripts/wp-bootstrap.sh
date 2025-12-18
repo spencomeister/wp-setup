@@ -120,14 +120,14 @@ run_wp() {
   # Install core if not installed
   docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
     "$stack-cli" \
-    sh -lc "WP_BIN=\$(command -v wp); php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core is-installed --path=/var/www/html || php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core install --path=/var/www/html \
+    sh -lc "WP_BIN=\$(command -v wp); php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core is-installed --path=/var/www/html --url='$url' || php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core install --path=/var/www/html \
       --url='$url' --title='WordPress ($apex)' \
-      --admin_user='$ADMIN_USER' --admin_password='$ADMIN_PASS' --admin_email='$ADMIN_EMAIL'"
+      --admin_user='$ADMIN_USER' --admin_password='$ADMIN_PASS' --admin_email='$ADMIN_EMAIL' --skip-email"
 
   # Enable multisite (subdomain) if not already
   docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
     "$stack-cli" \
-    sh -lc "WP_BIN=\$(command -v wp); php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" config get MULTISITE --path=/var/www/html >/dev/null 2>&1 || php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core multisite-convert --path=/var/www/html --subdomains --title='Network ($apex)'"
+    sh -lc "WP_BIN=\$(command -v wp); php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" config get MULTISITE --path=/var/www/html --url='$url' >/dev/null 2>&1 || php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core multisite-convert --path=/var/www/html --url='$url' --subdomains --title='Network ($apex)'"
 
   echo "OK: $stack"
 }

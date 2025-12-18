@@ -107,3 +107,23 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
 - 修正版では `WP_CLI_PHP_ARGS='-d memory_limit=512M'` を付与して実行します。
 - 反映後、`out/` を再生成してから再実行してください。
 
+---
+
+## `wp-bootstrap.sh` 実行時に `Undefined array key "HTTP_HOST"`
+
+原因:
+- wp-cli がURL情報を十分に持っていない状態で WordPress の処理が走り、`$_SERVER['HTTP_HOST']` が未設定として警告が出ることがあります。
+
+対処:
+- 修正版では `--url` を付けて実行し、警告が出にくいようにしています。最新化して `bash scripts/wp-bootstrap.sh` を再実行してください。
+
+---
+
+## `wp-bootstrap.sh` 実行時に `sendmail: can't connect ... (127.0.0.1)`
+
+原因:
+- `wordpress:cli` コンテナにMTAが無く、`wp core install` が通知メールを送ろうとして失敗します（機能的には致命的ではありません）。
+
+対処:
+- 修正版では `wp core install --skip-email` を使って抑制しています。
+
