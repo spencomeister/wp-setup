@@ -102,6 +102,13 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
 bash scripts/wp-bootstrap.sh
 ```
 
+補足:
+- もし `wp-bootstrap.sh` が `Allowed memory size ... exhausted` で落ちる場合は、wp-cli 側のメモリ上限を上げて再実行できます。
+
+```bash
+WP_CLI_MEMORY_LIMIT=1024M bash scripts/wp-bootstrap.sh
+```
+
 更新（証明書更新）:
 
 ```bash
