@@ -114,6 +114,17 @@ run_wp() {
 
   echo "--- Bootstrapping $stack ($url) ---"
 
+  # Fix ownership/permissions first.
+  # If wp-cli previously ran as root, wp-content/uploads may become unwritable and uploads fail with:
+  #   The uploaded file could not be moved to wp-content/uploads/YYYY/MM.
+  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm --user root \
+    "$stack-cli" \
+    sh -lc "set -e; \
+      mkdir -p /var/www/html/wp-content/uploads; \
+      chown -R 33:33 /var/www/html || true; \
+      chmod 775 /var/www/html || true; \
+      chmod -R u=rwX,g=rwX,o=rX /var/www/html/wp-content || true"
+
   # Download WordPress if not present
   docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
     "$stack-cli" \
@@ -137,6 +148,15 @@ run_wp() {
   docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm \
     "$stack-cli" \
     sh -lc "WP_BIN=\$(command -v wp); php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" config get MULTISITE --path=/var/www/html --url='$url' >/dev/null 2>&1 || php -d memory_limit=$WP_CLI_MEMORY_LIMIT \"\$WP_BIN\" core multisite-convert --path=/var/www/html --url='$url' --subdomains --title='Network ($apex)'"
+
+  # Re-apply ownership/permissions (plugins/themes/uploads created during install).
+  docker compose -f "$COMPOSE_FILE" --env-file "$SECRETS_FILE" run --rm --user root \
+    "$stack-cli" \
+    sh -lc "set -e; \
+      mkdir -p /var/www/html/wp-content/uploads; \
+      chown -R 33:33 /var/www/html/wp-content; \
+      find /var/www/html/wp-content -type d -exec chmod 775 {} +; \
+      find /var/www/html/wp-content -type f -exec chmod 664 {} +"
 
   echo "OK: $stack"
 }

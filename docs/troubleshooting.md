@@ -129,6 +129,37 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
 
 ---
 
+## 管理画面アップロードで `The uploaded file could not be moved to wp-content/uploads/YYYY/MM.`
+
+原因（多くの場合）:
+- `wp-content` や `wp-content/uploads` が root 所有になっており、PHP-FPM（www-data）が書き込めない
+	- 典型例: `wordpress:cli` を root で実行して WordPress を展開/初期化した
+
+対処:
+1) リポジトリを最新化（wp-cli を www-data 実行 + bootstrap が自動で chown/chmod）
+2) `out/` を再生成
+
+```bash
+python3 scripts/render.py --config config/config.yml --out out
+```
+
+3) 起動/再起動
+
+```bash
+docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
+```
+
+4) 権限を揃え直す（安全に再実行可）
+
+```bash
+bash scripts/wp-bootstrap.sh
+```
+
+補足:
+- すでに動いている環境でも、`bash scripts/wp-bootstrap.sh` の再実行で `wp-content` の所有者/権限を揃えます。
+
+---
+
 ## `stg.example.com` が `example.com/wp-signup.php?new=stg` にリダイレクトされる
 
 症状（例）:
