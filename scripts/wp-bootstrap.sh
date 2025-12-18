@@ -81,11 +81,19 @@ run_wp() {
   local apex="$2"       # example.com
   local db_host="$3"    # wp-a-db
   local db_user="$4"    # wordpress
-  local db_pass_var="$5"# WP_A_DB_PASSWORD
+  local db_pass_var="$5" # WP_A_DB_PASSWORD
   local url="https://$apex"
 
+  # デバッグ: 変数名と値を出力
+  echo "[DEBUG] db_pass_var='$db_pass_var'"
+  # 変数名に余計な文字が混入していないかチェック
+  if [[ ! "$db_pass_var" =~ ^[A-Z0-9_]+$ ]]; then
+    echo "[ERROR] db_pass_var='$db_pass_var' is not a valid variable name" >&2
+    exit 1
+  fi
+
   # Resolve DB password from env var name
-  local db_pass=${!db_pass_var}
+  local db_pass="${!db_pass_var}"
   if [[ -z "$db_pass" ]]; then
     echo "Missing $db_pass_var in secrets.env" >&2
     exit 1
