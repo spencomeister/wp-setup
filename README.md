@@ -66,6 +66,15 @@ bash scripts/run.sh --create
 bash scripts/run.sh --scrap-and-recreate
 ```
 
+## Zabbix だけ作り直す
+
+Cloudflare Access 用の Zabbix ドメインを変更したい（例: `zabbix.ops.example.com` のような2階層を避ける）場合など、
+Zabbix だけを再生成できます。
+
+```bash
+bash scripts/zabbix-recreate.sh --config config/config.yml --out out
+```
+
 1) 設定を用意
 
 注意:
@@ -134,8 +143,17 @@ WP_CLI_MEMORY_LIMIT=1024M bash scripts/wp-bootstrap.sh
 更新（証明書更新）:
 
 ```bash
-bash scripts/certbot.sh renew --config config/config.yml --out out
+bash scripts/certbot.sh renew --config config/config.yml --out out --reload-edge
+# （念のため明示 reload したい場合）
 docker compose -f out/docker-compose.yml --env-file out/secrets.env exec edge nginx -s reload
+```
+
+Cloudflare の 526（Full strict）対策メモ:
+- オリジン証明書を更新/再発行したら、`edge` の Nginx reload が必要です（更新ファイルを読み直すため）。
+- ドメインを追加/変更して証明書の SAN を更新したい場合は強制再発行します。
+
+```bash
+bash scripts/certbot.sh issue --config config/config.yml --out out --force --reload-edge
 ```
 
 ## 最初からやり直す（DB/WPデータ削除）

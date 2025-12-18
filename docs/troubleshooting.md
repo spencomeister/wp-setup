@@ -160,6 +160,43 @@ bash scripts/wp-bootstrap.sh
 
 ---
 
+## Cloudflare で `Invalid SSL certificate (526)`
+
+意味:
+- Cloudflare の SSL/TLS モードが **Full (strict)** のとき、Cloudflare がオリジン（この構成だと `edge`）の証明書を検証し、
+	- 期限切れ
+	- ドメイン不一致（例: `ibara.dev` を要求しているのに `example.com` の証明書を返している）
+	- 証明書チェーン不正
+	のいずれかで失敗しています。
+
+よくある原因:
+- 証明書は更新できているが、`edge` の Nginx を reload しておらず古い証明書を出し続けている
+- `edge.sites[*].tls_domains` に apex（例: `ibara.dev`）が入っていない（`*.ibara.dev` だけだと apex はカバーされません）
+- SNI の server block が足りず、別 vhost の証明書が返っている
+
+オリジンが返す証明書を確認（クライアント側から）:
+
+```bash
+openssl s_client -connect <ORIGIN_IP>:443 -servername ibara.dev </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates
+```
+
+対処（手動）:
+1) `tls_domains` を見直し（apex + wildcard を両方入れる）
+2) 再発行 + reload
+
+```bash
+bash scripts/certbot.sh issue --config config/config.yml --out out --force --reload-edge
+docker compose -f out/docker-compose.yml --env-file out/secrets.env exec edge nginx -s reload
+```
+
+更新時（renew）の推奨:
+
+```bash
+bash scripts/certbot.sh renew --config config/config.yml --out out --reload-edge
+```
+
+---
+
 ## `stg.example.com` が `example.com/wp-signup.php?new=stg` にリダイレクトされる
 
 症状（例）:

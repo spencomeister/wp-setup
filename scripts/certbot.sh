@@ -14,17 +14,23 @@ shift || true
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 CONFIG_PATH="$ROOT_DIR/config/config.yml"
 OUT_DIR="$ROOT_DIR/out"
+FORCE_REISSUE=0
+RELOAD_EDGE=0
+ONLY_TYPE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --config) CONFIG_PATH="$2"; shift 2;;
     --out) OUT_DIR="$2"; shift 2;;
+    --force) FORCE_REISSUE=1; shift;;
+    --reload-edge) RELOAD_EDGE=1; shift;;
+    --only-type) ONLY_TYPE="$2"; shift 2;;
     *) echo "Unknown arg: $1" >&2; exit 2;;
   esac
 done
 
 if [[ -z "$ACTION" ]]; then
-  echo "Usage: certbot.sh <issue|renew> [--config path] [--out dir]" >&2
+  echo "Usage: certbot.sh <issue|renew> [--config path] [--out dir] [--force] [--reload-edge] [--only-type wordpress|zabbix]" >&2
   exit 2
 fi
 
@@ -60,8 +66,9 @@ fi
 # Extract required values from YAML using python (keeps bash simple)
 PY=${PYTHON:-python3}
 readarray -t CERT_PLAN < <(
-  "$PY" - "$CONFIG_PATH" <<'PY'
+  ONLY_TYPE="$ONLY_TYPE" "$PY" - "$CONFIG_PATH" <<'PY'
 import sys
+import os
 from pathlib import Path
 try:
     import yaml
@@ -77,6 +84,10 @@ if len(sys.argv) < 2:
 cfg_path = Path(sys.argv[1])
 cfg = yaml.safe_load(cfg_path.read_text(encoding='utf-8'))
 
+only_type = (os.environ.get('ONLY_TYPE') or '').strip().lower()
+if only_type and only_type not in {'wordpress', 'zabbix'}:
+  raise SystemExit(f"Invalid --only-type: {only_type}")
+
 le = cfg.get('letsencrypt', {})
 email = le.get('email')
 le_dir = le.get('dir')
@@ -91,6 +102,8 @@ print(f"LE_DIR={le_dir}")
 print(f"REUSE={'1' if reuse else '0'}")
 
 for s in sites:
+  if only_type and str(s.get('type') or '').strip().lower() != only_type:
+    continue
     tls = s.get('tls_domains')
     if not tls:
         continue
@@ -147,8 +160,31 @@ run_certbot() {
     "$@"
 }
 
+reload_edge_best_effort() {
+  # Cloudflare Full(strict) will fail (526) if the origin serves an expired/mismatched cert.
+  # Certbot renew updates files on disk, but Nginx needs a reload to pick up the new cert.
+  # Do a best-effort reload when compose is available.
+  local compose_file="$OUT_DIR/docker-compose.yml"
+  if [[ ! -f "$compose_file" ]]; then
+    return 0
+  fi
+
+  # Prefer secrets in out/ when present.
+  local env_file="$OUT_DIR/secrets.env"
+  if [[ ! -f "$env_file" && -f "$ROOT_DIR/config/secrets.env" ]]; then
+    env_file="$ROOT_DIR/config/secrets.env"
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    docker compose -f "$compose_file" --env-file "$env_file" exec -T edge nginx -s reload >/dev/null 2>&1 || true
+  fi
+}
+
 if [[ "$ACTION" == "renew" ]]; then
   run_certbot renew --non-interactive --agree-tos
+  if [[ "$RELOAD_EDGE" == "1" ]]; then
+    reload_edge_best_effort
+  fi
   echo "Renew completed."
   exit 0
 fi
@@ -180,6 +216,11 @@ while IFS= read -r line; do
     --dns-cloudflare-propagation-seconds 30
   )
 
+  # Force re-issue even if a cert exists (useful when domains changed / Cloudflare 526 due to mismatch).
+  if [[ "$FORCE_REISSUE" == "1" ]]; then
+    args+=( --force-renewal --cert-name "$cert_name" )
+  fi
+
   for d in $domains; do
     args+=( -d "$d" )
   done
@@ -187,5 +228,9 @@ while IFS= read -r line; do
   echo "Issuing cert: $cert_name ($domains)"
   run_certbot "${args[@]}"
 done < <(printf '%s\n' "${CERT_PLAN[@]}")
+
+if [[ "$RELOAD_EDGE" == "1" ]]; then
+  reload_edge_best_effort
+fi
 
 echo "Issue completed."
