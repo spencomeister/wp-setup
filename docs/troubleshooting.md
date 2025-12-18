@@ -77,3 +77,22 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env restart edge
 - 修正版ではスクリプト側で絶対パスに正規化します。
 - もし古い版を使っている場合は、`--out` を絶対パスで渡してください（例: `--out /root/wp-setup/out`）。
 
+---
+
+## `docker compose ps` で `The "XXX" variable is not set. Defaulting to a blank string.`
+
+原因:
+- `docker-compose.yml` 内の `${WP_A_DB_PASSWORD}` のような **compose側の変数展開**は、`env_file:` では解決されません。
+	- これは「コンテナに渡す環境変数」と「composeがYAMLを解釈する時の変数」が別物のためです。
+
+対処（どちらか）:
+1) README通りに `--env-file` を付けて実行する
+
+```bash
+docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
+docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
+```
+
+2) `out/.env` を用意してから `cd out` で実行する
+- `bash scripts/init-secrets.sh` を実行すると `out/.env` も自動生成されます。
+

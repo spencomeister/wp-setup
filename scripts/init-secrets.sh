@@ -84,4 +84,9 @@ if [[ -d "$OUT_DIR" ]]; then
   cp "$SECRETS_FILE" "$OUT_DIR/secrets.env"
   chmod 600 "$OUT_DIR/secrets.env" || true
   echo "Copied to: $OUT_DIR/secrets.env"
+
+  # docker compose の ${VAR} 置換用（.env を自動で読むため）
+  cp "$SECRETS_FILE" "$OUT_DIR/.env"
+  chmod 600 "$OUT_DIR/.env" || true
+  echo "Copied to: $OUT_DIR/.env"
 fi

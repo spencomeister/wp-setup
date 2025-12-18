@@ -61,6 +61,9 @@ sudo bash scripts/setup-al2023.sh
 - `config/config.yml` を作成
 - `config/secrets.env` を作成（最低限 `CF_DNS_API_TOKEN=` を埋める）
 
+注意:
+- `config/config.yml` の `letsencrypt.email` は **実在するメールアドレス**にしてください（`admin@example.com` のままだと Let’s Encrypt に拒否されます）
+
 2) 生成
 ```bash
 python3 scripts/render.py --config config/config.yml --out out
@@ -88,6 +91,11 @@ bash scripts/certbot.sh issue --config config/config.yml --out out
 docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
 ```
 
+補足:
+- `cd out` して `docker compose up -d` のように実行する場合、compose の変数展開用に `out/.env` が必要です。
+  - `bash scripts/init-secrets.sh` 実行後は `out/.env` も自動生成されます。
+  - もし `out/.env` が無い場合は `docker compose --env-file ./secrets.env up -d` を使ってください。
+
 6) WordPress 初期化（マルチサイト化）
 
 ```bash
@@ -99,6 +107,25 @@ bash scripts/wp-bootstrap.sh
 ```bash
 bash scripts/certbot.sh renew --config config/config.yml --out out
 docker compose -f out/docker-compose.yml --env-file out/secrets.env exec edge nginx -s reload
+```
+
+## 最初からやり直す（DB/WPデータ削除）
+
+注意: `down -v` により MariaDB/PostgreSQL/WordPress のデータが消えます（証明書は消しません）。
+
+```bash
+cd ~/wp-setup/out
+docker compose down -v --remove-orphans
+
+cd ~/wp-setup
+# （必要なら）既存の秘密情報を作り直したい場合のみ
+# rm -f config/secrets.env
+
+bash scripts/init-secrets.sh
+python3 scripts/render.py --config config/config.yml --out out
+
+docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
+bash scripts/wp-bootstrap.sh
 ```
 
 ## メモ

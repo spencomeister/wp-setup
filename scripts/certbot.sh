@@ -110,6 +110,13 @@ if [[ -z "$EMAIL" || -z "$LE_DIR" ]]; then
   exit 1
 fi
 
+# Guard against placeholder emails that Let's Encrypt rejects.
+if [[ "$EMAIL" == "admin@example.com" || "$EMAIL" == *@example.com || "$EMAIL" == *@example.net || "$EMAIL" == *@example.org ]]; then
+  echo "Invalid letsencrypt.email in config: '$EMAIL'" >&2
+  echo "Set a real email address in config/config.yml (letsencrypt.email), then retry." >&2
+  exit 1
+fi
+
 mkdir -p "$LE_DIR"
 
 # Normalize LE_DIR to an absolute path as well.

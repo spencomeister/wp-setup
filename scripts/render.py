@@ -230,10 +230,19 @@ def render(config_path: Path, templates_dir: Path, out_dir: Path) -> None:
 
     # Copy canonical secrets if present
     canonical_secrets = config_path.parent / "secrets.env"
+    secrets_content: str | None = None
     if canonical_secrets.exists():
-        _write_text(out_dir / "secrets.env", _read_text(canonical_secrets))
+        secrets_content = _read_text(canonical_secrets)
+        _write_text(out_dir / "secrets.env", secrets_content)
     elif preserved_secrets is not None:
-        _write_text(out_dir / "secrets.env", preserved_secrets)
+        secrets_content = preserved_secrets
+        _write_text(out_dir / "secrets.env", secrets_content)
+
+    # Also write .env for docker compose variable substitution.
+    # Note: env_file sets container env, but ${VAR} substitution is resolved from
+    # the compose CLI environment / .env / --env-file.
+    if secrets_content is not None:
+        _write_text(out_dir / ".env", secrets_content)
 
     # Copy certbot helper script templates are host-side; nothing to do here.
 
