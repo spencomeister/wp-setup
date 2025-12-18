@@ -104,13 +104,15 @@ print(f"REUSE={'1' if reuse else '0'}")
 for s in sites:
   if only_type and str(s.get('type') or '').strip().lower() != only_type:
     continue
-    tls = s.get('tls_domains')
-    if not tls:
-        continue
-    # choose cert name: first non-wildcard else first
-    cert_name = next((d for d in tls if not str(d).startswith('*.')), tls[0])
-    tls = [str(d) for d in tls]
-    print("CERT=" + cert_name + " " + " ".join(tls))
+
+  tls = s.get('tls_domains')
+  if not tls:
+    continue
+
+  # choose cert name: first non-wildcard else first
+  cert_name = next((d for d in tls if not str(d).startswith('*.')), tls[0])
+  tls = [str(d) for d in tls]
+  print("CERT=" + str(cert_name) + " " + " ".join(tls))
 PY
 )
 
