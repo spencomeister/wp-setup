@@ -150,3 +150,19 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
 - Multisite（subdomain）運用で `stg.example.com` をネットワークのapexにする場合、子サイトは `site1.stg.example.com` のように **2階層**になります。
 	- そのため `*.example.com` ではカバーできず、`*.stg.example.com` のDNS/証明書が必要です。
 
+	---
+
+	## `413 Request Entity Too Large`（メディア/プラグインZIPのアップロード）
+
+	原因:
+	- 入口の edge(Nginx) がデフォルトの `client_max_body_size`（1MB）で先に弾き、WordPress 側まで届いていません。
+
+	対処:
+	- `config/config.yml` の `wordpress.php.upload_max_mb` を十分大きく設定（例: 256）
+	- その後 `out/` を再生成し、edgeを再起動します。
+
+	```bash
+	python3 scripts/render.py --config config/config.yml --out out
+	docker compose -f out/docker-compose.yml --env-file out/secrets.env restart edge
+	```
+

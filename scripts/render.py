@@ -198,7 +198,13 @@ def render(config_path: Path, templates_dir: Path, out_dir: Path) -> None:
             )
         )
 
-    edge_conf = _render_template(edge_base, {"SERVER_BLOCKS": "\n\n".join(server_blocks)})
+    edge_conf = _render_template(
+        edge_base,
+        {
+            "SERVER_BLOCKS": "\n\n".join(server_blocks),
+            "UPLOAD_MAX_MB": str(upload_max_mb),
+        },
+    )
     _write_text(out_dir / "nginx" / "edge" / "00-edge.conf", edge_conf)
 
     # Render php.ini
