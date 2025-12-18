@@ -1,0 +1,17 @@
+.env
+config/secrets.env
+config/cloudflare.ini
+**/.DS_Store
+**/node_modules/
+
+# Generated outputs
+out/
+
+# Contains plaintext secrets by requirement
+logs/
+
+# Docker volumes (if bind-mounted)
+data/
+
+# LetsEncrypt material (if kept in repo path)
+letsencrypt/

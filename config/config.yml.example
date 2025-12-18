@@ -1,0 +1,86 @@
+# WordPress + Zabbix (single-host) config example
+# - Copy to config/config.yml and edit.
+# - Secrets referenced by *_env should be provided via config/secrets.env (not committed).
+
+system:
+  timezone: Asia/Tokyo
+  locale: en_US.UTF-8
+  ntp_servers:
+    - ntp.nict.jp
+
+cloudflare:
+  proxy_enabled: true
+  # Cloudflare API token is read from this env var (in config/secrets.env)
+  dns_api_token_env: CF_DNS_API_TOKEN
+
+letsencrypt:
+  email: admin@example.com
+  # Host path used for certbot + nginx mounts
+  # Fixed path policy: /srv/letsencrypt
+  # (scripts/link-certs.sh creates /etc/letsencrypt -> /srv/letsencrypt symlink)
+  dir: /srv/letsencrypt
+  # If true and cert already exists in letsencrypt dir, reuse it.
+  reuse_existing: true
+
+edge:
+  bind_port: 443
+  # External FQDNs handled by edge SNI
+  sites:
+    - name: wp-a
+      type: wordpress
+      apex_domain: example.com
+      tls_domains:
+        - example.com
+        - "*.example.com"
+      upstream: http://wp-a-nginx:80
+
+    - name: wp-b
+      type: wordpress
+      apex_domain: example.me
+      tls_domains:
+        - example.me
+        - "*.example.me"
+      upstream: http://wp-b-nginx:80
+
+    - name: zabbix
+      type: zabbix
+      public_domain: zabbix.ops.example.net
+      tls_domains:
+        - zabbix.ops.example.net
+      upstream: http://zbx-web:8080
+      cloudflare_access:
+        enabled: true
+
+wordpress:
+  multisite:
+    enabled: true
+    mode: subdomain
+  php:
+    upload_max_mb: 256
+
+stacks:
+  - name: wp-a
+    db:
+      root_password_env: WP_A_DB_ROOT_PASSWORD
+      database: wordpress
+      user: wordpress
+      password_env: WP_A_DB_PASSWORD
+
+  - name: wp-b
+    db:
+      root_password_env: WP_B_DB_ROOT_PASSWORD
+      database: wordpress
+      user: wordpress
+      password_env: WP_B_DB_PASSWORD
+
+zabbix:
+  enabled: true
+  db:
+    # PostgreSQL (decided)
+    user: zabbix
+    password_env: ZBX_DB_PASSWORD
+    database: zabbix
+
+firewall:
+  # Optional policy hint for setup scripts
+  inbound_443: cloudflare_only
