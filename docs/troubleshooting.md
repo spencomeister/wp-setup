@@ -158,11 +158,16 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
 	- 入口の edge(Nginx) がデフォルトの `client_max_body_size`（1MB）で先に弾き、WordPress 側まで届いていません。
 
 	対処:
-	- `config/config.yml` の `wordpress.php.upload_max_mb` を十分大きく設定（例: 256）
+	- `config/config.yml` の `wordpress.php.upload_max_mb` を十分大きく設定（最大 512）
+	- 併せて `wordpress.php.post_max_mb`（>= upload）と `wordpress.php.memory_limit_mb` も調整
 	- その後 `out/` を再生成し、edgeを再起動します。
 
 	```bash
 	python3 scripts/render.py --config config/config.yml --out out
 	docker compose -f out/docker-compose.yml --env-file out/secrets.env restart edge
 	```
+
+	補足（Cloudflare）:
+	- Cloudflare のプロキシ（オレンジ雲）経由だと、プラン/設定によってアップロードサイズ上限が先に当たることがあります。
+		- オリジン側を 512MB にしても、Cloudflare 側の上限を超えると同様に失敗します。
 

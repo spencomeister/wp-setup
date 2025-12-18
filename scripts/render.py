@@ -85,7 +85,7 @@ def _cert_name_for_tls_domains(tls_domains: list[str]) -> str:
     return tls_domains[0]
 
 
-def parse_sites(config: dict[str, Any]) -> tuple[int, str, list[Site], int]:
+def parse_sites(config: dict[str, Any]) -> tuple[int, str, list[Site], int, int, int, int, int]:
     edge = config.get("edge")
     if not isinstance(edge, dict):
         raise ValueError("edge must be a mapping")
@@ -103,7 +103,27 @@ def parse_sites(config: dict[str, Any]) -> tuple[int, str, list[Site], int]:
     php = wp.get("php")
     if not isinstance(php, dict):
         raise ValueError("wordpress.php must be a mapping")
+
     upload_max_mb = _require_int(php.get("upload_max_mb"), "wordpress.php.upload_max_mb")
+    if upload_max_mb < 1 or upload_max_mb > 512:
+        raise ValueError("wordpress.php.upload_max_mb must be between 1 and 512")
+
+    post_max_mb = _require_int(php.get("post_max_mb", upload_max_mb), "wordpress.php.post_max_mb")
+    if post_max_mb < upload_max_mb:
+        raise ValueError("wordpress.php.post_max_mb must be >= wordpress.php.upload_max_mb")
+
+    memory_limit_mb = _require_int(php.get("memory_limit_mb", 512), "wordpress.php.memory_limit_mb")
+    if memory_limit_mb < 128:
+        raise ValueError("wordpress.php.memory_limit_mb must be >= 128")
+
+    max_execution_time = _require_int(
+        php.get("max_execution_time", 300),
+        "wordpress.php.max_execution_time",
+    )
+    max_input_time = _require_int(
+        php.get("max_input_time", 300),
+        "wordpress.php.max_input_time",
+    )
 
     sites_cfg = edge.get("sites")
     if not isinstance(sites_cfg, list) or not sites_cfg:
@@ -138,12 +158,22 @@ def parse_sites(config: dict[str, Any]) -> tuple[int, str, list[Site], int]:
             )
         )
 
-    return bind_port, le_dir, sites, upload_max_mb
+    # NOTE: Keep return type stable for render() below.
+    return bind_port, le_dir, sites, upload_max_mb, post_max_mb, memory_limit_mb, max_execution_time, max_input_time
 
 
 def render(config_path: Path, templates_dir: Path, out_dir: Path) -> None:
     config = _load_yaml(config_path)
-    bind_port, le_dir, sites, upload_max_mb = parse_sites(config)
+    (
+        bind_port,
+        le_dir,
+        sites,
+        upload_max_mb,
+        post_max_mb,
+        memory_limit_mb,
+        max_execution_time,
+        max_input_time,
+    ) = parse_sites(config)
 
     # Preserve operator secrets across re-render
     preserved_secrets: str | None = None
@@ -209,7 +239,16 @@ def render(config_path: Path, templates_dir: Path, out_dir: Path) -> None:
 
     # Render php.ini
     php_ini_tpl = _read_text(templates_dir / "php-fpm" / "php.ini.template")
-    php_ini = _render_template(php_ini_tpl, {"UPLOAD_MAX_MB": str(upload_max_mb)})
+    php_ini = _render_template(
+        php_ini_tpl,
+        {
+            "UPLOAD_MAX_MB": str(upload_max_mb),
+            "POST_MAX_MB": str(post_max_mb),
+            "MEMORY_LIMIT_MB": str(memory_limit_mb),
+            "MAX_EXECUTION_TIME": str(max_execution_time),
+            "MAX_INPUT_TIME": str(max_input_time),
+        },
+    )
     _write_text(out_dir / "php-fpm" / "php.ini", php_ini)
 
     # Copy php-fpm Dockerfile

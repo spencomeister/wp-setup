@@ -67,7 +67,15 @@ wordpress:
     enabled: true
     mode: subdomain
   php:
+    # Upload limits (must be <= 512)
     upload_max_mb: 256
+    # post_max must be >= upload_max
+    post_max_mb: 256
+    # PHP memory_limit (should be >= upload_max; 512+ recommended)
+    memory_limit_mb: 512
+    # Timeouts (seconds)
+    max_execution_time: 300
+    max_input_time: 300
 
 stacks:
   - name: wp-a
