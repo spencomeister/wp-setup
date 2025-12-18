@@ -33,6 +33,11 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
   exit 1
 fi
 
+# Normalize OUT_DIR to an absolute path for docker bind mounts.
+# If OUT_DIR is relative (e.g. "out"), docker may treat it as a *named volume*.
+mkdir -p "$OUT_DIR"
+OUT_DIR=$(cd "$OUT_DIR" && pwd -P)
+
 SECRETS_FILE="$OUT_DIR/secrets.env"
 if [[ ! -f "$SECRETS_FILE" && -f "$ROOT_DIR/config/secrets.env" ]]; then
   SECRETS_FILE="$ROOT_DIR/config/secrets.env"
@@ -106,6 +111,9 @@ if [[ -z "$EMAIL" || -z "$LE_DIR" ]]; then
 fi
 
 mkdir -p "$LE_DIR"
+
+# Normalize LE_DIR to an absolute path as well.
+LE_DIR=$(cd "$LE_DIR" && pwd -P)
 
 # Fixed policy hint
 if [[ "$LE_DIR" != "/srv/letsencrypt" ]]; then

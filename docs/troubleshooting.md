@@ -66,3 +66,14 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env restart edge
 - `config/config.yml.example` をベースに `config/config.yml` を作り直し
 - `bash scripts/init-secrets.sh` で `out/secrets.env` を作り直し
 
+---
+
+## `certbot.sh` で `out/certbot includes invalid characters for a local volume name`
+
+原因:
+- `bash scripts/certbot.sh ... --out out` のように `--out` に相対パスを渡すと、Dockerが `out/certbot` をホストパスではなく "ボリューム名" として解釈して失敗することがあります。
+
+対処:
+- 修正版ではスクリプト側で絶対パスに正規化します。
+- もし古い版を使っている場合は、`--out` を絶対パスで渡してください（例: `--out /root/wp-setup/out`）。
+
