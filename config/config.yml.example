@@ -13,6 +13,17 @@ cloudflare:
   # Cloudflare API token is read from this env var (in config/secrets.env)
   dns_api_token_env: CF_DNS_API_TOKEN
 
+  # Optional: create/update required DNS records automatically
+  # - Creates A/AAAA records for all edge.sites[*].tls_domains (including wildcards)
+  # - content points to this server's public IP
+  dns:
+    enabled: false
+    # origin_ipv4: auto            # default: auto-detect
+    # origin_ipv4: 203.0.113.10    # override
+    # origin_ipv6: auto            # optional auto-detect
+    # origin_ipv6: "2001:db8::10"  # optional override
+    ttl: 1
+
 letsencrypt:
   email: admin@example.com
   # Host path used for certbot + nginx mounts

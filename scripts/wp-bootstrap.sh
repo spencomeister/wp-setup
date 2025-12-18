@@ -8,9 +8,18 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 OUT_DIR=${OUT_DIR:-"$ROOT_DIR/out"}
+CONFIG_PATH=${CONFIG_PATH:-"$ROOT_DIR/config/config.yml"}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --out) OUT_DIR="$2"; shift 2;;
+    --config) CONFIG_PATH="$2"; shift 2;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
 COMPOSE_FILE="$OUT_DIR/docker-compose.yml"
 SECRETS_FILE="$OUT_DIR/secrets.env"
-CONFIG_PATH=${CONFIG_PATH:-"$ROOT_DIR/config/config.yml"}
 
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "Missing $COMPOSE_FILE (run scripts/render.py)" >&2

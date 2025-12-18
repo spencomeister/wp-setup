@@ -57,12 +57,32 @@ sudo bash scripts/setup-al2023.sh
 
 ## 実行順（ホスト上で）
 
+## 一気通貫（推奨）
+
+`config/config.yml` と `config/secrets.env` が記入済みなら、以下で通し実行できます。
+
+```bash
+# 破棄（DB/WPデータ削除）
+bash scripts/run.sh --scrap
+
+# 作成（render → secrets → Cloudflare DNS(有効時) → certbot → compose up → wp-bootstrap）
+bash scripts/run.sh --create
+
+# 破棄して作り直し
+bash scripts/run.sh --scrap-and-recreate
+```
+
 1) 設定を用意
 - `config/config.yml` を作成
 - `config/secrets.env` を作成（最低限 `CF_DNS_API_TOKEN=` を埋める）
 
 注意:
 - `config/config.yml` の `letsencrypt.email` は **実在するメールアドレス**にしてください（`admin@example.com` のままだと Let’s Encrypt に拒否されます）
+- WordPress を2スタックに分ける場合、基本は **別の apex ドメイン（例: `example.com` と `example.me`）** を推奨します。
+  - もし2つ目を `stg.example.com` のように「1つ目の配下サブドメイン」を apex にする場合、
+    - edge の振り分けが `*.example.com` に吸われやすい（設定ミスで wp-a 側に入る）
+    - Multisite（subdomain）なら `*.stg.example.com` のDNS/証明書が必要
+    になります。
 
 2) 生成
 ```bash
@@ -78,14 +98,31 @@ bash scripts/init-secrets.sh
 - 出力: `config/secrets.env`（永続） + `out/secrets.env`（存在すればコピー）
 - ログ: `logs/secrets-<timestamp>.log`（要求通り **パスワードが残ります**）
 
-4) 証明書発行（既存があれば再利用）
+4) （任意）Cloudflare DNS を自動設定
+
+DNSが未設定だと、ブラウザから到達できません。
+このリポジトリは Cloudflare API を使って `edge.sites[*].tls_domains` の A/AAAA レコードを作成/更新できます。
+
+事前準備:
+- `config/config.yml` で `cloudflare.dns.enabled: true` を設定
+  - `cloudflare.dns.origin_ipv4` は未指定（または `auto`）なら **自動取得**します
+  - `origin_ipv6` も `auto` で自動取得できます（未指定でもOK）
+
+実行（まず plan 推奨）:
+
+```bash
+bash scripts/cloudflare-dns.sh plan  --config config/config.yml
+bash scripts/cloudflare-dns.sh apply --config config/config.yml
+```
+
+5) 証明書発行（既存があれば再利用）
 
 ```bash
 bash scripts/link-certs.sh
 bash scripts/certbot.sh issue --config config/config.yml --out out
 ```
 
-5) コンテナ起動
+6) コンテナ起動
 
 ```bash
 docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
@@ -96,7 +133,7 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env up -d
   - `bash scripts/init-secrets.sh` 実行後は `out/.env` も自動生成されます。
   - もし `out/.env` が無い場合は `docker compose --env-file ./secrets.env up -d` を使ってください。
 
-6) WordPress 初期化（マルチサイト化）
+7) WordPress 初期化（マルチサイト化）
 
 ```bash
 bash scripts/wp-bootstrap.sh

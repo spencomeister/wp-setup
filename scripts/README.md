@@ -5,3 +5,6 @@
 予定:
 - render.py: config/config.yml → out/ 以下に docker-compose.yml と nginx conf を生成
 - setup-ubuntu.sh / setup-al2023.sh: TZ/Locale/NTP/Docker/Zabbix Agent をセットアップ
+
+追加:
+- cloudflare-dns.sh: Cloudflare DNS レコード（A/AAAA）を plan/apply で作成/更新

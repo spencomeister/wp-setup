@@ -127,3 +127,26 @@ docker compose -f out/docker-compose.yml --env-file out/secrets.env ps
 対処:
 - 修正版では `wp core install --skip-email` を使って抑制しています。
 
+---
+
+## `stg.example.com` が `example.com/wp-signup.php?new=stg` にリダイレクトされる
+
+症状（例）:
+- `curl -I --resolve stg.example.com:443:127.0.0.1 https://stg.example.com/` が `location: https://example.com/wp-signup.php?new=stg` を返す
+
+原因:
+- edge(Nginx) が `stg.example.com` を **wp-a（`*.example.com`）側へ転送**しており、wp-a の multisite が「未登録のサブサイト」として signup に誘導しています。
+	- `wp-b` を「別スタック」として運用したい場合は、edge 側に `stg.example.com` 用の vhost（server_name + upstream）が必要です。
+
+確認:
+- `out/nginx/edge/00-edge.conf` に `server_name stg.example.com` のブロックが存在するか
+
+対処:
+- `config/config.yml` の `edge.sites` で、`wp-b` の `tls_domains` に `stg.example.com`（必要なら `*.stg.example.com`）を入れる
+- `bash scripts/certbot.sh issue --config config/config.yml --out out` を再実行して、`stg.example.com`（および `*.stg.example.com`）の証明書を発行
+- `python3 scripts/render.py --config config/config.yml --out out` で再生成し、`docker compose -f out/docker-compose.yml --env-file out/secrets.env restart edge`
+
+補足:
+- Multisite（subdomain）運用で `stg.example.com` をネットワークのapexにする場合、子サイトは `site1.stg.example.com` のように **2階層**になります。
+	- そのため `*.example.com` ではカバーできず、`*.stg.example.com` のDNS/証明書が必要です。
+
